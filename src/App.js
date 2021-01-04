@@ -14,6 +14,39 @@ const initialFormState = {
 
 function App() {
     const [formState, updateFormState] = useState(initialFormState);
+    const [user, updateUser] = useState(null);
+
+    useEffect(() => {
+        checkUser();
+        setAuthListener();
+    }, []);
+
+    async function setAuthListener() {
+        const listener = (data) => {
+            switch (data.payload.event) {
+                case "signIn":
+                    console.log("user signed in");
+                    break;
+                case "signOut":
+                    console.log("user signed out: ", data);
+                    updateFormState(() => ({ ...formState, formType: "signUp" }));
+                    break;
+                default:
+                    break;
+            }
+        };
+
+        Hub.listen("auth", listener);
+    }
+    async function checkUser() {
+        try {
+            const user = await Auth.currentAuthenticatedUser();
+            console.log("user: ", user);
+            updateUser(user);
+            updateFormState(() => ({ ...formState, formType: "signedIn" }));
+        } catch (err) {}
+    }
+
     function onChange(e) {
         e.persist();
         updateFormState(() => ({ ...formState, [e.target.name]: e.target.value }));
@@ -46,6 +79,16 @@ function App() {
                     <input name="password" type="password" onChange={onChange} placeholder="password" />
                     <input name="email" onChange={onChange} placeholder="email" />
                     <button onClick={signUp}>Sign Up</button>
+                    <button
+                        onClick={() =>
+                            updateFormState(() => ({
+                                ...formState,
+                                formType: "signIn",
+                            }))
+                        }
+                    >
+                        Sign In
+                    </button>
                 </div>
             )}
             {formType === "confirmSignUp" && (
@@ -62,7 +105,12 @@ function App() {
                 </div>
             )}
 
-            {formType === "signedIn" && <h1>Hello world, welcome user!</h1>}
+            {formType === "signedIn" && (
+                <div>
+                    <h1>Hello world, welcome user!</h1>
+                    <button onClick={() => Auth.signOut()}>Sign Out</button>
+                </div>
+            )}
         </div>
     );
 }
